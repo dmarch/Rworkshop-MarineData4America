@@ -1,0 +1,63 @@
+---
+title: "Rstudio demo"
+subtitle: Using R to work with Copernicus Marine Data
+date: '2021-06-30'
+author: "David March"
+output:
+  pdf_document: default
+  html_notebook: default
+urlcolor: blue
+---
+
+# Introduction
+
+This tutorial is aimed to provide you an introductory overview on using R programming language to work with [CMEMS](https://marine.copernicus.eu/) data. R has a great potential to handle marine spatial data and perform complex spatial operations. In particular, we will use [RStudio](https://www.rstudio.com/), a popular Integrated Development Environment (IDE) for coding in R.
+
+
+# Setup
+
+In order to follow this tutorial, you will need to:
+
+1. Install [RStudio Desktop](https://www.rstudio.com/). The Open Source Edition provides a free license for multiple operating systems.
+
+2. Download the sample data from [here](https://www.rstudio.com/).
+
+3. Open Rstudio and run the following code to install all required packages:
+
+```{r message = FALSE, warning = FALSE, eval = FALSE}
+install.packages(c("raster", "ncdf4", "ggplot2", "lubridate"))
+```
+
+# NetCDF files
+
+[NetCDF](https://www.unidata.ucar.edu/software/netcdf/) is a community standard for sharing scientific data. It has been adopted as a data format for many oceanography systems, including the Copernicus Marine products. A NetCDF file contains dimensions, variables, and attributes.
+
+* **Dimensions** represent real physical dimension (e.g. time, longitude, latitude).
+
+* **Variables** are used to represent values of the same type (e.g. water temperature) and are described by its list of dimensions.
+
+* **Attributes** are use to keep information about the data. They can provide information about one specific variable (e.g. units) or about the whole dataset (e.g. processing details)
+
+
+
+# Inspect NetCDF files
+
+For this tutorial 
+
+
+| Tables        | Are           | Cool  |
+| ------------- |:-------------:| -----:|
+| col 3 is      | right-aligned | $1600 |
+| col 2 is      | centered      |   $12 |
+| zebra stripes | are neat      |    $1 |
+
+
+
+In order to inspect a NetCDF, we will use the `ncdf4` package. This package provides a R interface to NetCDF files and allow reading and editing them.
+
+
+After checking the printed results, we 
+
+
+
+
