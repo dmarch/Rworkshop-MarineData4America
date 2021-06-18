@@ -1,11 +1,12 @@
 ---
 title: "Rstudio demo"
-subtitle: Using R to work with Copernicus Marine Data
-date: '2021-06-30'
 author: "David March"
+date: '2021-06-30'
 output:
   pdf_document: default
   html_notebook: default
+  word_document: default
+subtitle: Using R to work with Copernicus Marine Data
 urlcolor: blue
 ---
 
@@ -42,21 +43,79 @@ install.packages(c("raster", "ncdf4", "ggplot2", "lubridate"))
 
 # Inspect NetCDF files
 
-For this tutorial 
+Here we will import and explore a NetCDF file from R. The NetCDF correspond to a sample file from a numerical model from CMEMS. More specifically, it corresponds to a sea water temperature datasets from the Global Ocean 1/12º Physics Analysis and Forecast. In the following table, you can check the parameters used to download the dataset.
+
+| Parameter        | Value         |
+|:---------------- |:--------------| 
+| Longitude (min)  | -120          |
+| Longitude (max)  | -20           |
+| Latitude (min)   | -20           |
+| Latitude (max)   | 40            |
+| Start depth      | 1.5414        |
+| End depth        | 1.5414        |
+| Variables        | thetao        |
+| Start time       | 2021-05-01 12:00 |
+| End time         | 2021-05-31 12:00 |
+
+Table: Parameters of the sample dataset. Downloaded from Global Ocean 1/12º Physics Analysis and Forecast (Product: GLOBAL-ANALYSIS-FORECAST-PHY-001-024)
 
 
-| Tables        | Are           | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 |
+
+In order to inspect the NetCDF, we will use the `ncdf4` package. This package provides a R interface to NetCDF files and allow reading and editing them.
 
 
 
-In order to inspect a NetCDF, we will use the `ncdf4` package. This package provides a R interface to NetCDF files and allow reading and editing them.
+```{r message = FALSE, warning = FALSE}
+library(ncdf4)
+
+# Import NetCDF
+nc <- nc_open("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
+
+# Prints information about the NetCDF file, including the variables and dimensions it contains.
+print(nc)
+```
 
 
-After checking the printed results, we 
+We can see that the NetCDF contains **1** variable, **4** dimensions and **25** global attributes.
+
+The variable `thetao` contains specific attributes, including the names, units and complementary parameters. You can check the documentation of the product for further details.
+
+**Note:** Time in NetCDF can be coded                                    following different conventions. Therefore,                                   it is very important to inpect the NetCDF and check the format used. In this case, as you can see from the print, the unit of the time dimension is: hours since 1950-01-01 00:00:00. Note that some products format their data using different reference dates and/or using seconds/days rather than hours. Such variability is also present in CMEMS.
+
+```{r message = FALSE, warning = FALSE}
+# Print units for time dimension
+nc$dim$time$units
+```
+
+We will get back to this point when handling multiple dates.
+
+
+# Import NetCDF as Raster
+
+The numerical model can be considerer as a gridded product. To manipulate and visualize gridded data, we will use the `raster` package.
+
+```{r message = FALSE, warning = FALSE} 
+library(raster)
+
+# import NetCDF with raster
+r <- raster("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
+
+# plot raster dataset
+plot(r)
+
+# print a summary of the raster
+r
+```
+
+Exploring the summary, we got that there only one band (out of 31). In addition, we can see information on the spatial and temporal resolutions.
+
+**Note:** The function `raster()` only work for single layers. If you want to work with multiple bands, consider using `brick()` or `stack()`.
+
+
+## Multiband layers
+
+
+
 
 
 
