@@ -26,7 +26,7 @@ In order to follow this tutorial, you will need to:
 3. Open Rstudio and run the following code to install all required packages:
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
-install.packages(c("raster", "ncdf4", "ggplot2", "lubridate"))
+install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet"))
 ```
 
 # NetCDF files
@@ -98,13 +98,13 @@ The numerical model can be considerer as a gridded product. To manipulate and vi
 library(raster)
 
 # import NetCDF with raster
-r <- raster("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
+sst <- raster("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
 
 # plot raster dataset
-plot(r)
+plot(sst)
 
 # print a summary of the raster
-r
+sst
 ```
 
 Exploring the summary, we got that there only one band (out of 31). In addition, we can see information on the spatial and temporal resolutions.
@@ -114,6 +114,93 @@ Exploring the summary, we got that there only one band (out of 31). In addition,
 
 ## Multiband layers
 
+```{r message = FALSE, warning = FALSE} 
+library(raster)
+
+# import NetCDF with raster
+sst <- brick("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
+
+# plot raster dataset
+plot(sst)
+
+# print a summary of the raster
+sst
+```
+
+
+
+
+## Extract data from a marine protected area
+
+UNEP-WCMC and IUCN (2021), Protected Planet: The World Database on Protected Areas (WDPA) and World Database on Other Effective Area-based Conservation Measures (WD-OECM) [Online], June 2021, Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
+
+
+```{r message = FALSE, warning = FALSE} 
+library(sf)
+library(leaflet)
+
+# Import boundaries of Galapagos Islands Marine Protected Area
+mpa <- st_read("data/GalapagosMPA.gpkg")
+
+# Plot the boundary of MPA with a base map
+leaflet(mpa) %>% 
+  addProviderTiles("Esri.OceanBasemap") %>% 
+  addPolygons(color = "green")
+```
+
+
+## Zona statistics
+
+Here we will summarize raster values over polygonal areas, commonly referred to as zonal statistics. We will use the `exactextractr` package, which is suited to work with big datasets. In addition, unlike most zonal statistics implementations, it handles grid cells that are partially covered by a polygon. For further information about this package, check out its latest developments [here](https://github.com/isciences/exactextractr).
+
+
+
+
+
+https://resources.marine.copernicus.eu/?option=com_csw&view=details&product_id=SST_GLO_SST_L4_REP_OBSERVATIONS_010_011
+
+```{r message = FALSE, warning = FALSE} 
+library(raster)
+
+# import NetCDF with raster
+sst <- brick("data/global-reanalysis-phy-001-030-monthly_1623978556148.nc")
+
+# plot raster dataset
+plot(sst)
+
+# print a summary of the raster
+sst
+```
+
+
+
+https://dominicroye.github.io/en/2018/how-to-create-warming-stripes-in-r/
+
+
+```{r message = FALSE, warning = FALSE} 
+library(exactextractr)
+library(lubridate)
+
+# get date
+date_sst <- getZ(sst) %>% parse_date_time("Ymd HMS")
+
+# calculate average SST
+avg_sst <- exact_extract(sst, mpa, 'mean', stack_apply=T, force_df = F)
+avg_sst <- data.table::transpose(avg_sst)
+avg_sst <- data.frame(date = date_sst, sst = avg_sst)
+
+plot(avg_sst$date, avg_sst$V1, type="l")
+
+```
+
+
+
+
+
+
+
+
+## Make a plot (map and time series)
 
 
 
