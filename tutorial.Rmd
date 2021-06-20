@@ -3,9 +3,11 @@ title: "Rstudio demo"
 author: "David March"
 date: '2021-06-30'
 output:
-  pdf_document: default
+  html_document:
+    df_print: paged
   html_notebook: default
   word_document: default
+  pdf_document: default
 subtitle: Using R to work with Copernicus Marine Data
 urlcolor: blue
 ---
@@ -14,8 +16,22 @@ urlcolor: blue
 
 This tutorial is aimed to provide you an introductory overview on using R programming language to work with [CMEMS](https://marine.copernicus.eu/) data. R has a great potential to handle marine spatial data and perform complex spatial operations. In particular, we will use [RStudio](https://www.rstudio.com/), a popular Integrated Development Environment (IDE) for coding in R.
 
+Here, you will learn how to use RStudio to:
 
-# Setup
+* Import and inspect NetCDF files
+
+* Visualize and analyze gridded products
+
+* Explore data with dynamic maps
+
+* Analyze gridded products
+
+* Extract data from vector data (points, lines and polygons)
+
+* Plot maps with ggplot
+
+
+# Setup RStudio
 
 In order to follow this tutorial, you will need to:
 
@@ -26,22 +42,36 @@ In order to follow this tutorial, you will need to:
 3. Open Rstudio and run the following code to install all required packages:
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
-install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet"))
+install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet", "rasterVis", "exactextractr"))
 ```
 
-# NetCDF files
+4. Start loading the required packages
+```{r message = FALSE, warning = FALSE}
+library(ncdf4)
+library(raster)
+library(sf)
+library(leaflet)
+library(exactextractr)
+library(lubridate)
+library(rasterVis)
+```
 
-[NetCDF](https://www.unidata.ucar.edu/software/netcdf/) is a community standard for sharing scientific data. It has been adopted as a data format for many oceanography systems, including the Copernicus Marine products. A NetCDF file contains dimensions, variables, and attributes.
+
+# NetCDF files in R
+
+### Introduction to the NetCDF format
+
+[NetCDF](https://www.unidata.ucar.edu/software/netcdf/) is a community standard for sharing scientific data. It is particularly well suited to represent multidensional data, and has been adopted as a data format for many oceanography systems, including the Copernicus Marine products. A NetCDF file contains dimensions, variables, and attributes.
 
 * **Dimensions** represent real physical dimension (e.g. time, longitude, latitude).
 
 * **Variables** are used to represent values of the same type (e.g. water temperature) and are described by its list of dimensions.
 
-* **Attributes** are use to keep information about the data. They can provide information about one specific variable (e.g. units) or about the whole dataset (e.g. processing details)
+* **Attributes** are used to keep information about the data. They can provide information about one specific variable (e.g. units) or about the whole dataset (e.g. processing details)
 
 
 
-# Inspect NetCDF files
+### Inspect NetCDF files in R
 
 Here we will import and explore a NetCDF file from R. The NetCDF correspond to a sample file from a numerical model from CMEMS. More specifically, it corresponds to a sea water temperature datasets from the Global Ocean 1/12º Physics Analysis and Forecast. In the following table, you can check the parameters used to download the dataset.
 
@@ -51,13 +81,13 @@ Here we will import and explore a NetCDF file from R. The NetCDF correspond to a
 | Longitude (max)  | -20           |
 | Latitude (min)   | -20           |
 | Latitude (max)   | 40            |
-| Start depth      | 1.5414        |
-| End depth        | 1.5414        |
+| Start depth      | 0.494        |
+| End depth        | 0.494        |
 | Variables        | thetao        |
-| Start time       | 2021-05-01 12:00 |
-| End time         | 2021-05-31 12:00 |
+| Start time       | 2020-01-16 12:00 |
+| End time         | 2020-12-16 12:00 |
 
-Table: Parameters of the sample dataset. Downloaded from Global Ocean 1/12º Physics Analysis and Forecast (Product: GLOBAL-ANALYSIS-FORECAST-PHY-001-024)
+Table: Parameters of the sample dataset. Downloaded from Global Ocean 1/12º Physics Analysis and Forecast (Product: GLOBAL-ANALYSIS-FORECAST-PHY-001-024-MONTHLY)
 
 
 
@@ -66,21 +96,22 @@ In order to inspect the NetCDF, we will use the `ncdf4` package. This package pr
 
 
 ```{r message = FALSE, warning = FALSE}
-library(ncdf4)
+# Set the path for the sample NetCDF file
+ncfile <- "data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc"
 
 # Import NetCDF
-nc <- nc_open("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
+nc <- nc_open(ncfile)
 
 # Prints information about the NetCDF file, including the variables and dimensions it contains.
 print(nc)
 ```
 
 
-We can see that the NetCDF contains **1** variable, **4** dimensions and **25** global attributes.
+We can see that the NetCDF contains **1** variable, **4** dimensions and **18** global attributes.
 
 The variable `thetao` contains specific attributes, including the names, units and complementary parameters. You can check the documentation of the product for further details.
 
-**Note:** Time in NetCDF can be coded                                    following different conventions. Therefore,                                   it is very important to inpect the NetCDF and check the format used. In this case, as you can see from the print, the unit of the time dimension is: hours since 1950-01-01 00:00:00. Note that some products format their data using different reference dates and/or using seconds/days rather than hours. Such variability is also present in CMEMS.
+**Note:** Time in NetCDF can be coded following different conventions. Therefore, it is very important to inspect the NetCDF and check the format used. In this case, as you can see from the print, the unit of the time dimension is: hours since 1950-01-01. Note that some products format their data using different reference dates and/or using seconds/days rather than hours. Such variability is also present in CMEMS.
 
 ```{r message = FALSE, warning = FALSE}
 # Print units for time dimension
@@ -95,37 +126,76 @@ We will get back to this point when handling multiple dates.
 The numerical model can be considerer as a gridded product. To manipulate and visualize gridded data, we will use the `raster` package.
 
 ```{r message = FALSE, warning = FALSE} 
-library(raster)
-
 # import NetCDF with raster
-sst <- raster("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
-
-# plot raster dataset
-plot(sst)
+sst <- raster(ncfile)
 
 # print a summary of the raster
 sst
 ```
 
-Exploring the summary, we got that there only one band (out of 31). In addition, we can see information on the spatial and temporal resolutions.
+The summary provides relevant information to understand the imported dataset, including the number of bands, spatial resolution, spatial extent, coordinate reference system (CRS), name of variable, time stamps.
 
-**Note:** The function `raster()` only work for single layers. If you want to work with multiple bands, consider using `brick()` or `stack()`.
+
+
+
+## Basic maps
+
+The ***raster*** package provides a `plot()` function to visualize gridded products.
+
+```{r message = FALSE, warning = FALSE} 
+# plot raster dataset
+plot(sst)
+
+```
+
+There are more advanced advances to plot raster data in R, using packages such as ***rasterVis*** or ***ggplot2***. In addition, packages such as ***leaflet*** offer the possibility to build interactive maps.
+
+
+
+
+
+
+
 
 
 ## Multiband layers
 
-```{r message = FALSE, warning = FALSE} 
-library(raster)
+The function `raster()` only work for single band layers. In order to work with multiple bands, we can use `brick()` or `stack()` functions.
 
+```{r message = FALSE, warning = FALSE} 
 # import NetCDF with raster
-sst <- brick("data/global-analysis-forecast-phy-001-024_1623968610655.nc")
+sst <- brick(ncfile)
 
 # plot raster dataset
-plot(sst)
+levelplot(sst)
 
 # print a summary of the raster
 sst
 ```
+
+
+We now can see that all bands from the NetCDF file (each one for a different time stamp) have been imported.
+
+
+
+## Raster operations
+
+
+
+
+```{r message = FALSE, warning = FALSE} 
+
+# calculate average and SD
+sst_mean <- calc(sst, fun = mean)
+sst_sd <- calc(sst, fun = sd)
+
+# plot raster dataset
+plot(sst_mean, main = "Average SST")
+plot(sst_sd, main = "Standard deviation SST")
+
+```
+
+
 
 
 
@@ -136,9 +206,6 @@ UNEP-WCMC and IUCN (2021), Protected Planet: The World Database on Protected Are
 
 
 ```{r message = FALSE, warning = FALSE} 
-library(sf)
-library(leaflet)
-
 # Import boundaries of Galapagos Islands Marine Protected Area
 mpa <- st_read("data/GalapagosMPA.gpkg")
 
@@ -160,8 +227,6 @@ Here we will summarize raster values over polygonal areas, commonly referred to 
 https://resources.marine.copernicus.eu/?option=com_csw&view=details&product_id=SST_GLO_SST_L4_REP_OBSERVATIONS_010_011
 
 ```{r message = FALSE, warning = FALSE} 
-library(raster)
-
 # import NetCDF with raster
 sst <- brick("data/global-reanalysis-phy-001-030-monthly_1623978556148.nc")
 
@@ -178,9 +243,6 @@ https://dominicroye.github.io/en/2018/how-to-create-warming-stripes-in-r/
 
 
 ```{r message = FALSE, warning = FALSE} 
-library(exactextractr)
-library(lubridate)
-
 # get date
 date_sst <- getZ(sst) %>% parse_date_time("Ymd HMS")
 
