@@ -1,14 +1,17 @@
 ---
-title: "Rstudio demo"
+title: "Using R to work with Copernicus Marine Data"
 author: "David March"
 date: '2021-06-30'
 output:
-  pdf_document:
   html_notebook:
     toc: yes
-subtitle: Using R to work with Copernicus Marine Data
+    number_sections: yes
+  pdf_document:
+    toc: yes
+    number_sections: yes
+subtitle: MarineData4America Workshop
 urlcolor: blue
-toc-title: "Table of contents"
+toc-title: Table of contents
 ---
 
 # Introduction
@@ -30,7 +33,7 @@ Here, you will learn how to use RStudio to:
 * Plot maps and temporal series
 
 
-# Setup
+# Setup Environment
 
 ## Install RStudio
 
@@ -44,7 +47,6 @@ In order to follow this tutorial, you will need to:
 install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet",
                    "rasterVis", "rnaturalearth", "rnaturalearthdata"))
 ```
-
 
 3. Start loading the required packages
 ```{r message = FALSE, warning = FALSE}
@@ -60,17 +62,30 @@ library(rnaturalearthdata)
 ```
 
 
-## Download code and sample data
+## Download data
 
-Download the sample data from [here](https://www.rstudio.com/).
+This tutorial uses two sample datasets, that will be introduced later on in this tutorial. First, we will create a new directory in current working directory to write data to
+
+```{r message = FALSE, warning = FALSE}
+dir.create("data")
+```
+
+Then, we will download the sample data
+
+```{r message = FALSE, warning = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+# Download CMEMS sample data
+download.file(url = "https://github.com/dmarch/Rworkshop-MarineData4America/raw/main/data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc", destfile="data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc", mode = 'wb')
+
+# Download Galapagos Islands MPA
+download.file(url = "https://github.com/dmarch/Rworkshop-MarineData4America/raw/main/data/GalapagosMPA.gpkg", destfile="data/GalapagosMPA.gpkg", mode = 'wb')
+```
 
 
 
 
+# Handling NetCDF files in R
 
-# NetCDF files in R
-
-### Introduction to the NetCDF format
+## The NetCDF format
 
 [NetCDF](https://www.unidata.ucar.edu/software/netcdf/) is a community standard for sharing scientific data. It is particularly well suited to represent multidensional data, and has been adopted as a data format for many oceanography systems, including the Copernicus Marine products. A NetCDF file contains dimensions, variables, and attributes.
 
@@ -82,7 +97,7 @@ Download the sample data from [here](https://www.rstudio.com/).
 
 
 
-### Inspect NetCDF files in R
+## Inspect NetCDF files
 
 Here we will import and explore a NetCDF file from R. The NetCDF correspond to a sample file from a numerical model from CMEMS. More specifically, it corresponds to a sea water temperature datasets from the Global Ocean 1/12º Physics Analysis and Forecast. In the following table, you can check the parameters used to download the dataset.
 
@@ -125,19 +140,14 @@ We can see that the NetCDF contains **1** variable, **4** dimensions and **18** 
 
 The variable `thetao` contains specific attributes, including the names, units and complementary parameters. You can check the documentation of the product for further details.
 
-**Note:** Time in NetCDF can be coded following different conventions. Therefore, it is very important to inspect the NetCDF and check the format used. In this case, as you can see from the print, the unit of the time dimension is: hours since 1950-01-01. Note that some products format their data using different reference dates and/or using seconds/days rather than hours. Such variability is also present in CMEMS.
-
-```{r message = FALSE, warning = FALSE}
-# Print units for time dimension
-nc$dim$time$units
-```
-
-We will get back to this point when handling multiple dates.
 
 
-# Import NetCDF as Raster
 
-The numerical model can be considerer as a gridded product. To manipulate and visualize gridded data, we will use the `raster` package.
+## Import NetCDF as Raster
+
+### Single band
+
+The numerical model can be considered as a gridded product. To manipulate and visualize gridded data, we will use the `raster` package.
 
 ```{r message = FALSE, warning = FALSE} 
 # import NetCDF with raster
@@ -149,10 +159,6 @@ sst_single
 
 The summary provides relevant information to understand the imported dataset, including the number of bands, spatial resolution, spatial extent, coordinate reference system (CRS), name of variable, time stamps.
 
-
-
-
-## Basic maps
 
 The ***raster*** package provides a `plot()` function to visualize gridded products.
 
@@ -167,11 +173,11 @@ There are more advanced advances to plot raster data in R, using packages such a
 
 
 
-## Multiband layers
+### Multiband layers
 
 The function `raster()` only work for single band layers. In order to work with multiple bands, we can use `brick()` or `stack()` functions.
 
-```{r message = FALSE, warning = FALSE} 
+```{r message = FALSE, warning = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)} 
 # import NetCDF with raster
 sst_multi <- brick(ncfile)
 
@@ -187,25 +193,30 @@ We now can see that all bands from the NetCDF file (each one for a different tim
 
 
 
-## Raster operations
+# Raster analysis
 
 
+## Summary statistics
 
+Here, we will combine all monthly maps (n=12) to calculate the mean and standard deviation (SD). These constitutes two common metrics used to describe de centrality (middle value) and dispersion (how spread out the values are from the average) of the data. We will use the function `calc()`, which gathers all monthly for each single grid cell and applies the given function (i.e. mean or sd).
 
 ```{r message = FALSE, warning = FALSE} 
 
 # calculate average and SD
 sst_mean <- calc(sst_multi, fun = mean)
 sst_sd <- calc(sst_multi, fun = sd)
+```
 
+We can then explore the generated maps
+
+```{r message = FALSE, warning = FALSE} 
 # plot raster dataset
 plot(sst_mean, main = "Average SST")
 plot(sst_sd, main = "Standard deviation SST")
 ```
 
 
-
-## Maps with ggplot2
+A more advanced visualization of these maps can be conducted with the ***ggplot2*** package. This package offers a higher degree of customization and allows the generation of high-quality images to use in scientific journals or reports.
 
 
 ```{r message = FALSE, warning = FALSE} 
@@ -224,7 +235,7 @@ ggplot()+
   # add countries layers
   geom_sf(fill=grey(0.9), color=grey(0.6), lwd = 0.2, data=countries) +
   # define spatial extent
-  coord_sf(xlim = range(sst_df$x), ylim = range(sst_df$y), expand = c(0,0)) +
+  coord_sf(xlim = range(sst_df$x), ylim = range(sst_df$y), expand = F, ndiscr = 500) +
   # labels
   labs(title = "Sea Surface Temperature (SST)",
        subtitle = "Annual average estimated from monthly products for 2020",
@@ -233,10 +244,6 @@ ggplot()+
   # theme
   theme_bw() 
 ```
-
-
-
-
 
 
 
@@ -250,47 +257,48 @@ Raster values can be sampled from any type of vector data (i.e. points, lines, p
 
 * ***Polygons:*** This geometry can be used to represent marine boundaries, such as marine protected areas (MPAs) or jurisdictional waters.
 
-The function `extract()` offers a common approach to sample raster values from any of these types of vector data. In the following example, we will use the boundaries of the Galapagos Islands marine protected area. This boundary has been acquired from the [World Database on Protected Areas](www.protectedplanet.net).
+The function `extract()` offers a common approach to sample raster values from any of these types of vector data. In the following example, we will use the boundaries of the Galapagos Islands marine protected area. This boundary has been acquired from the [World Database on Protected Areas](www.protectedplanet.net) and converted to [GeoPackage](https://www.geopackage.org/) format (.gpkg). GeoPackage is an open standard used in GIS to store geoespatial information, and constitutes a modern alternative to the Shapefile format.
 
-
-
+To import vector data in R, we will use the ***sf*** package.
 
 ```{r message = FALSE, warning = FALSE} 
 # Import boundaries of Galapagos Islands Marine Protected Area
 mpa <- st_read("data/GalapagosMPA.gpkg")
+```
 
+We can visualize the boundaries of Galapagos Islands MPA, with the basic `plot()`.
 
-#palRaster <- colorNumeric("Spectral", domain = sst_mean@data@values, reverse = TRUE)
+```{r message = FALSE, warning = FALSE} 
+# basic plot
+plot(st_geometry(mpa))
+```
+
+However, in this occasion, we lack context information. In order to improve the visualization, we will use the ***leaflet*** package, which provides dynamic visualizations and uses web services to add base maps. In this plot, we will combine the previous average map of SST with the boundary of the MPA.
+
+```{r message = FALSE, warning = FALSE} 
+# Create color palette for CMEMS maps
+palRaster <- colorNumeric("Spectral", domain = sst_mean@data@values, reverse = TRUE,
+                          na.color = "transparent")
 
 # Plot the boundary of MPA with a base map
 leaflet(mpa) %>% 
+  # add base map
   addProviderTiles("Esri.OceanBasemap") %>%
-  #addRasterImage(sst_mean, colors = palRaster, opacity = 0.8) %>%
-  #addLegend(pal = palRaster, values = values(sst_mean), title = "SST (ºC)") %>%
+  # add raster map
+  addRasterImage(sst_mean, colors = palRaster, opacity = 0.8) %>%
+  # add legend
+  addLegend(pal = palRaster, values = values(sst_mean), title = "SST (ºC)") %>%
+  # add MPA boundary
   addPolygons(color = "green")
 ```
 
 
-## Zona statistics
-
-Here we will summarize raster values over polygonal areas, commonly referred to as zonal statistics. We will use the ***exactextractr*** package, which is suited to work with big datasets. In addition, unlike most zonal statistics implementations, it handles grid cells that are partially covered by a polygon. For further information about this package, check out its latest developments [here](https://github.com/isciences/exactextractr).
 
 
 
+## Zonal statistics
 
-
-https://resources.marine.copernicus.eu/?option=com_csw&view=details&product_id=SST_GLO_SST_L4_REP_OBSERVATIONS_010_011
-
-```{r message = FALSE, warning = FALSE} 
-# import NetCDF with raster
-# sst <- brick("data/global-reanalysis-phy-001-030-monthly_1623978556148.nc")
-# 
-# # plot raster dataset
-# plot(sst)
-# 
-# # print a summary of the raster
-# sst
-```
+Here we will summarize raster values over polygonal areas, commonly referred to as zonal statistics. We will use the `extract()` function from ***raster*** package
 
 
 
@@ -305,8 +313,8 @@ date_sst <- sst_multi %>%
   floor_date("month")
 
 # extract values from MPA and summarize values using the mean and standard deviation
-mpa_sst_avg <- raster::extract(sst_multi, mpa, fun=mean, na.rm=T)
-mpa_sst_sd <- raster::extract(sst_multi, mpa, fun=sd, na.rm=T)
+mpa_sst_avg <- extract(sst_multi, mpa, fun=mean, na.rm=T)
+mpa_sst_sd <- extract(sst_multi, mpa, fun=sd, na.rm=T)
 
 # generate data.frame with three new columns (time, mean, sd)
 mpa_sst <- data.frame(date = date_sst, sst_avg = c(mpa_sst_avg), sst_sd = c(mpa_sst_sd))
@@ -315,8 +323,13 @@ mpa_sst <- data.frame(date = date_sst, sst_avg = c(mpa_sst_avg), sst_sd = c(mpa_
 mpa_sst
 ```
 
+Note we use `raster::extract` this time when using a function.   
 
-Plot time series. You can find further information about the ***ggplot2*** package [here](https://ggplot2.tidyverse.org/)
+
+
+## Plot time series
+
+You can find further information about the ***ggplot2*** package [here](https://ggplot2.tidyverse.org/)
 
 ```{r message = FALSE, warning = FALSE} 
 # plot data
@@ -340,5 +353,7 @@ ggplot(mpa_sst, aes(x = date)) +
 
 
 
+# Conclusion
 
+This tutorial has provided a brief introduction to some of the potential capabilities of R to work with CMEMS data. Note that R can also be used to manipulate no only numerical model products, but also in-situ observations. In addition, it also offers the possibility to manipulate large datasets using parallel computing. Finally, visualization of spatio-temporal data can be enhanced through the animation of plots.
 
