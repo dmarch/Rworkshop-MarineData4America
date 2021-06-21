@@ -1,22 +1,34 @@
 ---
 title: "Using R to work with Copernicus Marine Data"
-author: "David March"
+author:
+- name: David March
+  email: dmarch@ub.edu
+  affiliation: University of Barcelona and IRBio, University of Exeter
 date: '2021-06-30'
 output:
-  html_notebook:
+  pdf_document:
     toc: yes
     number_sections: yes
-  pdf_document:
+  html_notebook:
     toc: yes
     number_sections: yes
 subtitle: MarineData4America Workshop
 urlcolor: blue
 toc-title: Table of contents
+header-includes:
+- |
+  ```{=latex}
+  \usepackage{authblk}
+  \author{David March\\ dmarch@ub.edu}
+  \affil{University of Barcelona and IRBio \\
+         University of Exeter \\
+        }
+  ```
 ---
 
 # Introduction
 
-This tutorial is aimed to provide you an introductory overview on using R programming language to work with [CMEMS](https://marine.copernicus.eu/) data. R has a great potential to handle marine spatial data and perform complex spatial operations. In particular, we will use [RStudio](https://www.rstudio.com/), a popular Integrated Development Environment (IDE) for coding in R.
+This tutorial is aimed to provide an introductory overview on using ***R*** programming language to work with [CMEMS](https://marine.copernicus.eu/) data. ***R*** has a great potential to handle marine spatial data and perform complex spatial operations. In particular, we will use [RStudio](https://www.rstudio.com/), a popular Integrated Development Environment (IDE) for coding in ***R***.
 
 Here, you will learn how to use RStudio to:
 
@@ -24,13 +36,8 @@ Here, you will learn how to use RStudio to:
 
 * Visualize and analyze gridded products
 
-* Explore spatial data with dynamic maps
-
-* Analyze gridded products
-
 * Extract data from vector data
 
-* Plot maps and temporal series
 
 
 # Setup Environment
@@ -64,13 +71,13 @@ library(rnaturalearthdata)
 
 ## Download data
 
-This tutorial uses two sample datasets, that will be introduced later on in this tutorial. First, we will create a new directory in current working directory to write data to
+This tutorial uses two sample datasets: one gridded product from CMEMS in NetCDF format and the boundaries of a marine protected area (MPA) in GeoPackage format. They both will be introduced later on in this tutorial. First, we will create a new directory in current working directory to write data to
 
 ```{r message = FALSE, warning = FALSE}
 dir.create("data")
 ```
 
-Then, we will download the sample data
+Then, sample data can be downloaded with the following commands:
 
 ```{r message = FALSE, warning = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
 # Download CMEMS sample data
@@ -99,7 +106,7 @@ download.file(url = "https://github.com/dmarch/Rworkshop-MarineData4America/raw/
 
 ## Inspect NetCDF files
 
-Here we will import and explore a NetCDF file from R. The NetCDF correspond to a sample file from a numerical model from CMEMS. More specifically, it corresponds to a sea water temperature datasets from the Global Ocean 1/12º Physics Analysis and Forecast. In the following table, you can check the parameters used to download the dataset.
+Here, we will import and explore a NetCDF file in R. The NetCDF correspond to a sample file from a numerical model from CMEMS. More specifically, it corresponds to a sea water temperature dataset from the Global Ocean 1/12º Physics Analysis and Forecast. In the following table, you can check the parameters used to download the dataset.
 
 | Parameter        | Value         |
 |:---------------- |:--------------| 
@@ -125,13 +132,13 @@ In order to inspect the NetCDF, we will use the `ncdf4` package. This package pr
 
 
 ```{r message = FALSE, warning = FALSE}
-# Set the path for the sample NetCDF file
+# Set the path for the NetCDF file
 ncfile <- "data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc"
 
 # Import NetCDF
 nc <- nc_open(ncfile)
 
-# Prints information about the NetCDF file, including the variables and dimensions it contains.
+# Print information about the NetCDF file
 print(nc)
 ```
 
@@ -147,7 +154,7 @@ The variable `thetao` contains specific attributes, including the names, units a
 
 ### Single band
 
-The numerical model can be considered as a gridded product. To manipulate and visualize gridded data, we will use the `raster` package.
+The numerical model constitutes a gridded product. To manipulate and visualize gridded data, we will use the ***raster*** package.
 
 ```{r message = FALSE, warning = FALSE} 
 # import NetCDF with raster
@@ -157,7 +164,7 @@ sst_single <- raster(ncfile)
 sst_single
 ```
 
-The summary provides relevant information to understand the imported dataset, including the number of bands, spatial resolution, spatial extent, coordinate reference system (CRS), name of variable, time stamps.
+The summary provides relevant information to understand the imported dataset, including the number of bands, spatial resolution, spatial extent, coordinate reference system (CRS), name of variable, time stamps. In this example, we can see that the importater raster contains one single band that correspond to the SST map of January 2020.
 
 
 The ***raster*** package provides a `plot()` function to visualize gridded products.
@@ -168,37 +175,37 @@ plot(sst_single)
 
 ```
 
-There are more advanced advances to plot raster data in R, using packages such as ***rasterVis*** or ***ggplot2***. In addition, packages such as ***leaflet*** offer the possibility to build interactive maps.
+There are more advanced functions to plot raster data in R, using packages such as ***rasterVis*** or ***ggplot2***. In addition, packages such as ***leaflet*** offer the possibility to build interactive maps. We will explore them later.
 
 
 
 
 ### Multiband layers
 
-The function `raster()` only work for single band layers. In order to work with multiple bands, we can use `brick()` or `stack()` functions.
+The function `raster()` only work for single band layers. In order to import multiple bands, we can use `brick()` or `stack()` functions.
 
 ```{r message = FALSE, warning = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)} 
-# import NetCDF with raster
+# import multi-band NetCDF file
 sst_multi <- brick(ncfile)
 
-# print a summary of the raster
+# print a summary of the brick
 sst_multi
-
-# plot raster dataset
-levelplot(sst_multi)
 ```
 
+We now can see that all bands from the NetCDF file (each one for a different time stamp) have been imported. In order to visualize multiple bands that share a common scale, we can use the function `levelplot()` from the ***rasterVis*** package.
 
-We now can see that all bands from the NetCDF file (each one for a different time stamp) have been imported.
+```{r message = FALSE, warning = FALSE} 
+# plot brick dataset
+levelplot(sst_multi)
+```
 
 
 
 # Raster analysis
 
-
 ## Summary statistics
 
-Here, we will combine all monthly maps (n=12) to calculate the mean and standard deviation (SD). These constitutes two common metrics used to describe de centrality (middle value) and dispersion (how spread out the values are from the average) of the data. We will use the function `calc()`, which gathers all monthly for each single grid cell and applies the given function (i.e. mean or sd).
+In this section, we will combine all monthly maps (n=12) to calculate the mean and standard deviation (SD). These are two common metrics used to describe de centrality (middle value) and dispersion (how spread out the values are from the average) of the data. We will use the function `calc()`, which gathers all monthly values for each single grid cell and applies the given function (i.e. mean or sd).
 
 ```{r message = FALSE, warning = FALSE} 
 
@@ -218,14 +225,22 @@ plot(sst_sd, main = "Standard deviation SST")
 
 A more advanced visualization of these maps can be conducted with the ***ggplot2*** package. This package offers a higher degree of customization and allows the generation of high-quality images to use in scientific journals or reports.
 
-
+First, we need to transform the raster object into a `data.frame` class.
 ```{r message = FALSE, warning = FALSE} 
 # convert raster to data.frame
 sst_df <- as.data.frame(sst_mean, xy=TRUE, na.rm=TRUE)
+```
 
+Then, we will use the ***rnaturalearth*** package to download a global country map to use in the plot.
+
+```{r message = FALSE, warning = FALSE} 
 # import countries layer from Natural Earth
 countries <- ne_countries(scale = "medium", returnclass = "sf")
+```
 
+Finally, we use the `ggplot()` function from ***ggplot2*** package to create a customized map. Note that each map component is added with a `+`. You can find further information about the ***ggplot2*** package [here](https://ggplot2.tidyverse.org/).
+
+```{r message = FALSE, warning = FALSE} 
 # plot
 ggplot()+
   # add raster layer
@@ -247,6 +262,7 @@ ggplot()+
 
 
 
+
 ## Extract values from a Raster object
 
 Raster values can be sampled from any type of vector data (i.e. points, lines, polygons). In the marine realm, such type of vector data can be used to represent different objects:
@@ -255,9 +271,9 @@ Raster values can be sampled from any type of vector data (i.e. points, lines, p
 
 * ***Lines:*** Lines can be used to represent survey transects, shoreline, cables, pipelines.
 
-* ***Polygons:*** This geometry can be used to represent marine boundaries, such as marine protected areas (MPAs) or jurisdictional waters.
+* ***Polygons:*** This geometry type can be used to represent marine boundaries, such as marine protected areas (MPAs) or jurisdictional waters.
 
-The function `extract()` offers a common approach to sample raster values from any of these types of vector data. In the following example, we will use the boundaries of the Galapagos Islands marine protected area. This boundary has been acquired from the [World Database on Protected Areas](www.protectedplanet.net) and converted to [GeoPackage](https://www.geopackage.org/) format (.gpkg). GeoPackage is an open standard used in GIS to store geoespatial information, and constitutes a modern alternative to the Shapefile format.
+The function `extract()` offers a common approach to sample raster values from any of these three types of vector data. In the following example, we will use the boundaries of the Galapagos Islands marine protected area. This boundary has been acquired from the [World Database on Protected Areas](www.protectedplanet.net) and converted to [GeoPackage](https://www.geopackage.org/) format (.gpkg). GeoPackage is an open standard used in GIS to store geoespatial information, and constitutes a modern alternative to the Shapefile format.
 
 To import vector data in R, we will use the ***sf*** package.
 
@@ -266,14 +282,14 @@ To import vector data in R, we will use the ***sf*** package.
 mpa <- st_read("data/GalapagosMPA.gpkg")
 ```
 
-We can visualize the boundaries of Galapagos Islands MPA, with the basic `plot()`.
+We can visualize the boundaries of Galapagos Islands MPA, with the basic `plot()` function.
 
 ```{r message = FALSE, warning = FALSE} 
 # basic plot
 plot(st_geometry(mpa))
 ```
 
-However, in this occasion, we lack context information. In order to improve the visualization, we will use the ***leaflet*** package, which provides dynamic visualizations and uses web services to add base maps. In this plot, we will combine the previous average map of SST with the boundary of the MPA.
+However, in this occasion, we lack context information. In order to improve the visualization, we will use the ***leaflet*** package, which provides dynamic visualizations and uses web services to add base maps. In this plot, we will combine the previous average map of SST with the new boundary of the MPA.
 
 ```{r message = FALSE, warning = FALSE} 
 # Create color palette for CMEMS maps
@@ -292,15 +308,20 @@ leaflet(mpa) %>%
   addPolygons(color = "green")
 ```
 
+Note the ***leaflet*** package uses the pipe operator (`%>%`) to concatenate functions. This is similar to the `+`in a ***ggplot2*** statement.
 
 
 
+In this last exercise, we will summarize raster values over polygonal areas, commonly referred to as ***zonal statistics***. We will use the `extract()` function from ***raster*** package
 
-## Zonal statistics
+```{r message = FALSE, warning = FALSE} 
+# extract values from MPA and summarize values using the mean and standard deviation
+mpa_sst_avg <- extract(sst_multi, mpa, fun=mean, na.rm=T)
+mpa_sst_sd <- extract(sst_multi, mpa, fun=sd, na.rm=T)
+```
 
-Here we will summarize raster values over polygonal areas, commonly referred to as zonal statistics. We will use the `extract()` function from ***raster*** package
 
-
+We will combine the extracted data into a `data.frame`. But before that, we will also extract time data information form the raster to get the monthly dates.
 
 ```{r message = FALSE, warning = FALSE} 
 # get date
@@ -312,10 +333,6 @@ date_sst <- sst_multi %>%
   # get the first day of each month
   floor_date("month")
 
-# extract values from MPA and summarize values using the mean and standard deviation
-mpa_sst_avg <- extract(sst_multi, mpa, fun=mean, na.rm=T)
-mpa_sst_sd <- extract(sst_multi, mpa, fun=sd, na.rm=T)
-
 # generate data.frame with three new columns (time, mean, sd)
 mpa_sst <- data.frame(date = date_sst, sst_avg = c(mpa_sst_avg), sst_sd = c(mpa_sst_sd))
 
@@ -323,13 +340,8 @@ mpa_sst <- data.frame(date = date_sst, sst_avg = c(mpa_sst_avg), sst_sd = c(mpa_
 mpa_sst
 ```
 
-Note we use `raster::extract` this time when using a function.   
+In order to visualize the extracted information, we will use again the package ***ggplot2*** to plot the time series.
 
-
-
-## Plot time series
-
-You can find further information about the ***ggplot2*** package [here](https://ggplot2.tidyverse.org/)
 
 ```{r message = FALSE, warning = FALSE} 
 # plot data
@@ -355,5 +367,5 @@ ggplot(mpa_sst, aes(x = date)) +
 
 # Conclusion
 
-This tutorial has provided a brief introduction to some of the potential capabilities of R to work with CMEMS data. Note that R can also be used to manipulate no only numerical model products, but also in-situ observations. In addition, it also offers the possibility to manipulate large datasets using parallel computing. Finally, visualization of spatio-temporal data can be enhanced through the animation of plots.
+This tutorial has provided a brief introduction to some of the potential capabilities of R to work with CMEMS data. Note that R can also be used to manipulate no only numerical model products, but also in-situ observations. In addition, it also offers the possibility to manipulate large datasets using cloud and parallel computing.
 
