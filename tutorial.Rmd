@@ -3,13 +3,12 @@ title: "Rstudio demo"
 author: "David March"
 date: '2021-06-30'
 output:
-  html_document:
-    df_print: paged
-  html_notebook: default
-  word_document: default
-  pdf_document: default
+  pdf_document:
+  html_notebook:
+    toc: yes
 subtitle: Using R to work with Copernicus Marine Data
 urlcolor: blue
+toc-title: "Table of contents"
 ---
 
 # Introduction
@@ -22,39 +21,51 @@ Here, you will learn how to use RStudio to:
 
 * Visualize and analyze gridded products
 
-* Explore data with dynamic maps
+* Explore spatial data with dynamic maps
 
 * Analyze gridded products
 
-* Extract data from vector data (points, lines and polygons)
+* Extract data from vector data
 
-* Plot maps with ggplot
+* Plot maps and temporal series
 
 
-# Setup RStudio
+# Setup
+
+## Install RStudio
 
 In order to follow this tutorial, you will need to:
 
 1. Install [RStudio Desktop](https://www.rstudio.com/). The Open Source Edition provides a free license for multiple operating systems.
 
-2. Download the sample data from [here](https://www.rstudio.com/).
-
-3. Open Rstudio and run the following code to install all required packages:
+2. Open Rstudio and run the following code to install all required packages:
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
-install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet", "rasterVis", "exactextractr"))
+install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet",
+                   "rasterVis", "rnaturalearth", "rnaturalearthdata"))
 ```
 
-4. Start loading the required packages
+
+3. Start loading the required packages
 ```{r message = FALSE, warning = FALSE}
 library(ncdf4)
 library(raster)
 library(sf)
 library(leaflet)
-library(exactextractr)
 library(lubridate)
 library(rasterVis)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
 ```
+
+
+## Download code and sample data
+
+Download the sample data from [here](https://www.rstudio.com/).
+
+
+
 
 
 # NetCDF files in R
@@ -88,6 +99,9 @@ Here we will import and explore a NetCDF file from R. The NetCDF correspond to a
 | End time         | 2020-12-16 12:00 |
 
 Table: Parameters of the sample dataset. Downloaded from Global Ocean 1/12º Physics Analysis and Forecast (Product: GLOBAL-ANALYSIS-FORECAST-PHY-001-024-MONTHLY)
+
+
+***Note:*** CMEMS products can be automatically downloaded from R using the [RCMEMS](https://github.com/markpayneatwork/RCMEMS) package. However, this approach requires the installation of Python and Motu client, and is beyond the scope of this tutorial.
 
 
 
@@ -127,10 +141,10 @@ The numerical model can be considerer as a gridded product. To manipulate and vi
 
 ```{r message = FALSE, warning = FALSE} 
 # import NetCDF with raster
-sst <- raster(ncfile)
+sst_single <- raster(ncfile)
 
 # print a summary of the raster
-sst
+sst_single
 ```
 
 The summary provides relevant information to understand the imported dataset, including the number of bands, spatial resolution, spatial extent, coordinate reference system (CRS), name of variable, time stamps.
@@ -144,16 +158,11 @@ The ***raster*** package provides a `plot()` function to visualize gridded produ
 
 ```{r message = FALSE, warning = FALSE} 
 # plot raster dataset
-plot(sst)
+plot(sst_single)
 
 ```
 
 There are more advanced advances to plot raster data in R, using packages such as ***rasterVis*** or ***ggplot2***. In addition, packages such as ***leaflet*** offer the possibility to build interactive maps.
-
-
-
-
-
 
 
 
@@ -164,13 +173,13 @@ The function `raster()` only work for single band layers. In order to work with 
 
 ```{r message = FALSE, warning = FALSE} 
 # import NetCDF with raster
-sst <- brick(ncfile)
-
-# plot raster dataset
-levelplot(sst)
+sst_multi <- brick(ncfile)
 
 # print a summary of the raster
-sst
+sst_multi
+
+# plot raster dataset
+levelplot(sst_multi)
 ```
 
 
@@ -186,13 +195,43 @@ We now can see that all bands from the NetCDF file (each one for a different tim
 ```{r message = FALSE, warning = FALSE} 
 
 # calculate average and SD
-sst_mean <- calc(sst, fun = mean)
-sst_sd <- calc(sst, fun = sd)
+sst_mean <- calc(sst_multi, fun = mean)
+sst_sd <- calc(sst_multi, fun = sd)
 
 # plot raster dataset
 plot(sst_mean, main = "Average SST")
 plot(sst_sd, main = "Standard deviation SST")
+```
 
+
+
+## Maps with ggplot2
+
+
+```{r message = FALSE, warning = FALSE} 
+# convert raster to data.frame
+sst_df <- as.data.frame(sst_mean, xy=TRUE, na.rm=TRUE)
+
+# import countries layer from Natural Earth
+countries <- ne_countries(scale = "medium", returnclass = "sf")
+
+# plot
+ggplot()+
+  # add raster layer
+  geom_raster(aes(x=x, y=y, fill=layer), data=sst_df) +
+  # define color palette of raster layer
+  scale_fill_distiller(palette = "Spectral", name = "SST (ºC)") + 
+  # add countries layers
+  geom_sf(fill=grey(0.9), color=grey(0.6), lwd = 0.2, data=countries) +
+  # define spatial extent
+  coord_sf(xlim = range(sst_df$x), ylim = range(sst_df$y), expand = c(0,0)) +
+  # labels
+  labs(title = "Sea Surface Temperature (SST)",
+       subtitle = "Annual average estimated from monthly products for 2020",
+       x = "Longitude",
+       y = "Latitude") +
+  # theme
+  theme_bw() 
 ```
 
 
@@ -200,25 +239,41 @@ plot(sst_sd, main = "Standard deviation SST")
 
 
 
-## Extract data from a marine protected area
 
-UNEP-WCMC and IUCN (2021), Protected Planet: The World Database on Protected Areas (WDPA) and World Database on Other Effective Area-based Conservation Measures (WD-OECM) [Online], June 2021, Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
+## Extract values from a Raster object
+
+Raster values can be sampled from any type of vector data (i.e. points, lines, polygons). In the marine realm, such type of vector data can be used to represent different objects:
+
+* ***Points:*** Points can represent sampling locations, static platforms such as oceanographic buoys or moving objects such as animal tracks.
+
+* ***Lines:*** Lines can be used to represent survey transects, shoreline, cables, pipelines.
+
+* ***Polygons:*** This geometry can be used to represent marine boundaries, such as marine protected areas (MPAs) or jurisdictional waters.
+
+The function `extract()` offers a common approach to sample raster values from any of these types of vector data. In the following example, we will use the boundaries of the Galapagos Islands marine protected area. This boundary has been acquired from the [World Database on Protected Areas](www.protectedplanet.net).
+
+
 
 
 ```{r message = FALSE, warning = FALSE} 
 # Import boundaries of Galapagos Islands Marine Protected Area
 mpa <- st_read("data/GalapagosMPA.gpkg")
 
+
+#palRaster <- colorNumeric("Spectral", domain = sst_mean@data@values, reverse = TRUE)
+
 # Plot the boundary of MPA with a base map
 leaflet(mpa) %>% 
-  addProviderTiles("Esri.OceanBasemap") %>% 
+  addProviderTiles("Esri.OceanBasemap") %>%
+  #addRasterImage(sst_mean, colors = palRaster, opacity = 0.8) %>%
+  #addLegend(pal = palRaster, values = values(sst_mean), title = "SST (ºC)") %>%
   addPolygons(color = "green")
 ```
 
 
 ## Zona statistics
 
-Here we will summarize raster values over polygonal areas, commonly referred to as zonal statistics. We will use the `exactextractr` package, which is suited to work with big datasets. In addition, unlike most zonal statistics implementations, it handles grid cells that are partially covered by a polygon. For further information about this package, check out its latest developments [here](https://github.com/isciences/exactextractr).
+Here we will summarize raster values over polygonal areas, commonly referred to as zonal statistics. We will use the ***exactextractr*** package, which is suited to work with big datasets. In addition, unlike most zonal statistics implementations, it handles grid cells that are partially covered by a polygon. For further information about this package, check out its latest developments [here](https://github.com/isciences/exactextractr).
 
 
 
@@ -228,42 +283,60 @@ https://resources.marine.copernicus.eu/?option=com_csw&view=details&product_id=S
 
 ```{r message = FALSE, warning = FALSE} 
 # import NetCDF with raster
-sst <- brick("data/global-reanalysis-phy-001-030-monthly_1623978556148.nc")
-
-# plot raster dataset
-plot(sst)
-
-# print a summary of the raster
-sst
+# sst <- brick("data/global-reanalysis-phy-001-030-monthly_1623978556148.nc")
+# 
+# # plot raster dataset
+# plot(sst)
+# 
+# # print a summary of the raster
+# sst
 ```
 
-
-
-https://dominicroye.github.io/en/2018/how-to-create-warming-stripes-in-r/
 
 
 ```{r message = FALSE, warning = FALSE} 
 # get date
-date_sst <- getZ(sst) %>% parse_date_time("Ymd HMS")
+date_sst <- sst_multi %>%
+  # get time stamps from multi raster
+  getZ() %>%
+  # parse character to POSIXct class (time)
+  parse_date_time("Ymd HMS") %>%
+  # get the first day of each month
+  floor_date("month")
 
-# calculate average SST
-avg_sst <- exact_extract(sst, mpa, 'mean', stack_apply=T, force_df = F)
-avg_sst <- data.table::transpose(avg_sst)
-avg_sst <- data.frame(date = date_sst, sst = avg_sst)
+# extract values from MPA and summarize values using the mean and standard deviation
+mpa_sst_avg <- raster::extract(sst_multi, mpa, fun=mean, na.rm=T)
+mpa_sst_sd <- raster::extract(sst_multi, mpa, fun=sd, na.rm=T)
 
-plot(avg_sst$date, avg_sst$V1, type="l")
+# generate data.frame with three new columns (time, mean, sd)
+mpa_sst <- data.frame(date = date_sst, sst_avg = c(mpa_sst_avg), sst_sd = c(mpa_sst_sd))
 
+# inspect data.frame
+mpa_sst
 ```
 
 
+Plot time series. You can find further information about the ***ggplot2*** package [here](https://ggplot2.tidyverse.org/)
 
+```{r message = FALSE, warning = FALSE} 
+# plot data
+ggplot(mpa_sst, aes(x = date)) +
+  # add ribbon to represent mean +- SD
+  geom_ribbon(aes(ymin = sst_avg-sst_sd, ymax = sst_avg+sst_sd),  alpha=.2, linetype=0, fill="steelblue") +
+  # add line to represent mean value
+  geom_line(aes(y = sst_avg), size = 1, color="steelblue") +
+  # define frequency of x-axis and date labels
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
+  # plot labels labels
+  labs(title = "Sea Surface Temperature (SST) in Galapagos Islands MPA",
+       # note we use `expression()` to add +- symbol
+       subtitle = expression(Monthly~values~(mean %+-% SD)~from~2020),
+       x = "",
+       y = "SST (ºC)") +
+  # theme
+  theme_bw() 
 
-
-
-
-
-## Make a plot (map and time series)
-
+```
 
 
 
