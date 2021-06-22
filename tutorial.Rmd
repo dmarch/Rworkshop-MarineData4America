@@ -6,17 +6,19 @@ author:
   affiliation: University of Barcelona and IRBio, University of Exeter
 date: '2021-06-30'
 output:
-  html_notebook:
+  html_document:
+    toc: yes
+    df_print: paged
+  pdf_document:
     toc: yes
     number_sections: yes
-  pdf_document:
+  html_notebook:
     toc: yes
     number_sections: yes
 subtitle: MarineData4America Workshop
 urlcolor: blue
 toc-title: Table of contents
-header-includes:
-- |
+header-includes: |
   ```{=latex}
   \usepackage{authblk}
   \author{David March\\ dmarch@ub.edu}

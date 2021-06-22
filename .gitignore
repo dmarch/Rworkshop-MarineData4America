@@ -38,5 +38,4 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-## HTML outputs
-*.html
+
