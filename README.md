@@ -17,9 +17,9 @@ Source code and materials presented in the CMEMS training for America, June 29-3
 * RStudio
 
 ### Resources
-* [R notebook](https://dmarch.github.io/Rworkshop-MarineData4America/)
-* User manual, is a printed version of the notebook in pdf (located in `/doc` folder)
-* R script, is a minimal version of the notebook (located in `/R` folder)
+* [R notebook](https://dmarch.github.io/Rworkshop-MarineData4America/), is a web-based version with explanations and R code.
+* [User manual](https://github.com/dmarch/Rworkshop-MarineData4America/raw/main/tutorial.pdf), is a printed version of the notebook
+* [R script](https://github.com/dmarch/Rworkshop-MarineData4America/blob/main/R/tutorial.R), contains the R code
 * Video (coming soon)
 
 
