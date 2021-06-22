@@ -17,9 +17,9 @@ Source code and materials presented in the CMEMS training for America, June 29-3
 * RStudio
 
 ### Resources
-* R code
-* R notebook
-* User manual
+* R notebook, is the `tutorial.Rmd` file in this repository
+* User manual, is a printed version of the notebook in pdf (located in `/doc` folder)
+* R script, is a minimal version of the notebook (located in `/R` folder)
 * Video (coming soon)
 
 
