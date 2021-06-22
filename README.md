@@ -1,6 +1,7 @@
 
 ![](https://raw.githubusercontent.com/dmarch/Rworkshop-MarineData4America/main/img/header.jpeg)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5013605.svg)](https://doi.org/10.5281/zenodo.5013605)
 
 Source code and materials presented in the CMEMS training for America, June 29-30 2021
 
@@ -33,4 +34,4 @@ Sample data from `/data` folder was acquired from the following sources:
 
 ### Citation
 
-March, D. Using R to work with Copernicus Marine Data. MarineData4America Workshop. 29-30 June 2021.
+David March. Using R to work with Copernicus Marine Data. MarineData4America Workshop. 29-30 June 2021 (Version 1.0.0). Zenodo. http://doi.org/10.5281/zenodo.5013605
