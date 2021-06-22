@@ -14,7 +14,7 @@ Source code and materials presented in the CMEMS training for America, June 29-3
 * Extract values from a numerical model
 
 ### Requirements
-* RStudio
+* [RStudio](https://www.rstudio.com/)
 
 ### Resources
 * [R notebook](https://dmarch.github.io/Rworkshop-MarineData4America/), is a web-based version with explanations and R code.
