@@ -263,7 +263,7 @@ ggplot()+
 
 
 
-## Extract values from a Raster object
+## Extract values from a numerical model
 
 Raster values can be sampled from any type of vector data (i.e. points, lines, polygons). In the marine realm, such type of vector data can be used to represent different objects:
 
