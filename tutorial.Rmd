@@ -6,10 +6,10 @@ author:
   affiliation: University of Barcelona and IRBio, University of Exeter
 date: '2021-06-30'
 output:
-  pdf_document:
+  html_notebook:
     toc: yes
     number_sections: yes
-  html_notebook:
+  pdf_document:
     toc: yes
     number_sections: yes
 subtitle: MarineData4America Workshop
@@ -22,8 +22,6 @@ header-includes:
   \author{David March\\ dmarch@ub.edu}
   \affil{University of Barcelona and IRBio \\
          University of Exeter \\
-        }
-  ```
 ---
 
 # Introduction
@@ -36,7 +34,7 @@ Here, you will learn how to use RStudio to:
 
 * Visualize and analyze gridded products
 
-* Extract data from vector data
+* Extract values from a numerical model
 
 
 
@@ -194,7 +192,7 @@ sst_multi
 
 We now can see that all bands from the NetCDF file (each one for a different time stamp) have been imported. In order to visualize multiple bands that share a common scale, we can use the function `levelplot()` from the ***rasterVis*** package.
 
-```{r message = FALSE, warning = FALSE} 
+```{r levelplot, message = FALSE, warning = FALSE} 
 # plot brick dataset
 levelplot(sst_multi)
 ```
@@ -240,7 +238,7 @@ countries <- ne_countries(scale = "medium", returnclass = "sf")
 
 Finally, we use the `ggplot()` function from ***ggplot2*** package to create a customized map. Note that each map component is added with a `+`. You can find further information about the ***ggplot2*** package [here](https://ggplot2.tidyverse.org/).
 
-```{r message = FALSE, warning = FALSE} 
+```{r map-ggplot2, message = FALSE, warning = FALSE} 
 # plot
 ggplot()+
   # add raster layer
@@ -291,7 +289,7 @@ plot(st_geometry(mpa))
 
 However, in this occasion, we lack context information. In order to improve the visualization, we will use the ***leaflet*** package, which provides dynamic visualizations and uses web services to add base maps. In this plot, we will combine the previous average map of SST with the new boundary of the MPA.
 
-```{r message = FALSE, warning = FALSE} 
+```{r leaflet, message = FALSE, warning = FALSE} 
 # Create color palette for CMEMS maps
 palRaster <- colorNumeric("Spectral", domain = sst_mean@data@values, reverse = TRUE,
                           na.color = "transparent")
@@ -343,7 +341,7 @@ mpa_sst
 In order to visualize the extracted information, we will use again the package ***ggplot2*** to plot the time series.
 
 
-```{r message = FALSE, warning = FALSE} 
+```{r time-series-ggplot2, message = FALSE, warning = FALSE} 
 # plot data
 ggplot(mpa_sst, aes(x = date)) +
   # add ribbon to represent mean +- SD
@@ -368,4 +366,7 @@ ggplot(mpa_sst, aes(x = date)) +
 # Conclusion
 
 This tutorial has provided a brief introduction to some of the potential capabilities of R to work with CMEMS data. Note that R can also be used to manipulate no only numerical model products, but also in-situ observations. In addition, it also offers the possibility to manipulate large datasets using cloud and parallel computing.
+
+
+
 
