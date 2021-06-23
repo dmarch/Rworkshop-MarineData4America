@@ -1,6 +1,12 @@
-## install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet",
-##                    "rasterVis", "rnaturalearth", "rnaturalearthdata"))
+#############################################
+# Install packages
+#############################################
 
+# Install packages
+install.packages(c("raster", "ncdf4", "ggplot2", "lubridate", "sf", "leaflet",
+                   "rasterVis", "rnaturalearth", "rnaturalearthdata"))
+
+# Load package
 library(ncdf4)
 library(raster)
 library(sf)
@@ -11,13 +17,27 @@ library(ggplot2)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
+
+#############################################
+# Download data
+#############################################
+
+# Create data folder
 dir.create("data")
 
 # Download CMEMS sample data
-download.file(url = "https://github.com/dmarch/Rworkshop-MarineData4America/raw/main/data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc", destfile="data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc", mode = 'wb')
+download.file(url = "https://github.com/dmarch/Rworkshop-MarineData4America/raw/main/data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc",
+              destfile="data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc", mode = 'wb')
 
 # Download Galapagos Islands MPA
-download.file(url = "https://github.com/dmarch/Rworkshop-MarineData4America/raw/main/data/GalapagosMPA.gpkg", destfile="data/GalapagosMPA.gpkg", mode = 'wb')
+download.file(url = "https://github.com/dmarch/Rworkshop-MarineData4America/raw/main/data/GalapagosMPA.gpkg",
+              destfile="data/GalapagosMPA.gpkg", mode = 'wb')
+
+
+
+#############################################
+# Inspect NetCDF files
+#############################################
 
 # Set the path for the NetCDF file
 ncfile <- "data/global-analysis-forecast-phy-001-024-monthly_1624214790015.nc"
@@ -27,6 +47,13 @@ nc <- nc_open(ncfile)
 
 # Print information about the NetCDF file
 print(nc)
+
+
+#############################################
+# Import NetCDF as Raster
+#############################################
+
+### Singleband
 
 # import NetCDF with raster
 sst_single <- raster(ncfile)
@@ -38,6 +65,8 @@ sst_single
 plot(sst_single)
 
 
+### Multiband
+
 # import multi-band NetCDF file
 sst_multi <- brick(ncfile)
 
@@ -47,6 +76,12 @@ sst_multi
 # plot brick dataset
 levelplot(sst_multi)
 
+
+#############################################
+# Raster analysis
+#############################################
+
+### Summary statistics
 
 # calculate average and SD
 sst_mean <- calc(sst_multi, fun = mean)
@@ -79,6 +114,10 @@ ggplot()+
        y = "Latitude") +
   # theme
   theme_bw() 
+
+
+
+### Extract values from a numerical model
 
 # Import boundaries of Galapagos Islands Marine Protected Area
 mpa <- st_read("data/GalapagosMPA.gpkg")
